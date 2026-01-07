@@ -1,19 +1,30 @@
 import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
+import userRoute from './routes/userRouter.js';
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
+app.use("/api", userRoute)
 
-(async () => {
-    // console.log("process.env.MONGOURL : ", process.env.MONGOURL)
+const startServer = async () => {
     try {
-        await mongoose.connect(process.env.MONGOURL)
-        console.log("Database is connect successfully...")
-    } catch (error) {
-        console.log("Error : ", error)
-    }
-})()
+        console.log("MONGOURL:", process.env.MONGOURL);
 
-app.listen(process.env.PORT, () => {
-    console.log(`App is listen on ${process.env.PORT} `);
-})
+        await mongoose.connect(process.env.MONGOURL);
+        console.log("Database connected");
+
+        app.listen(process?.env?.PORT, () => {
+            console.log(`Server running on port ${process?.env?.PORT}`);
+        });
+    } catch (error) {
+        console.error("Startup failed:", error.message);
+        process.exit(1);
+    }
+};
+
+startServer();
+
+
+
