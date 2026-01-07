@@ -10,7 +10,7 @@ app.use("/api", userRoute)
 
 const startServer = async () => {
     try {
-        console.log("MONGOURL:", process.env.MONGOURL);
+        // console.log("MONGOURL:", process.env.MONGOURL);
 
         await mongoose.connect(process.env.MONGOURL);
         console.log("Database connected");
