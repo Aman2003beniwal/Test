@@ -1,6 +1,7 @@
 import User from "../model/userModel.js";
 import { requestBodyValidator } from "../utils/commonValidation.util.js";
 import bcrypt from "bcrypt"
+import jsonwebtoken from "jsonwebtoken";
 
 const createUser = async (req, res) => {
 
@@ -72,12 +73,15 @@ const createUser = async (req, res) => {
 
         const userData = await user.save();
 
-        console.log("userData :", userData)
+        const responseData = await User.find({ email: payload.email }).select("_id name email phone")
+
+        // console.log("userData :", userData)
+        console.log("responseData :", responseData)
 
         return res.status(201).json({
             success: true,
             message: "User registered successfully",
-            data: userData
+            data: responseData
         });
 
 
@@ -104,15 +108,7 @@ const getAllUser = async (req, res) => {
         } else {
             res.status(200).json({
                 success: true,
-                // data: data.map((data) => ({
-                //     name: data?.name,
-                //     email: data?.email,
-                //     phone: data.phone
-                // }
-                // ))
                 data
-
-
             })
         }
 
@@ -155,10 +151,10 @@ const updateUser = async (req, res) => {
             success: true,
             message: "User is update successfully..",
             updateData: { ...dataUpdate },
-            userAfterUpdate:updateUser
+            userAfterUpdate: updateUser
         })
     } catch (error) {
-         console.log(error)
+        console.log(error)
         return res.status(500).json({
             success: false,
             message: "Internal server error.."
@@ -167,5 +163,79 @@ const updateUser = async (req, res) => {
 
 }
 
-export default { createUser, getAllUser, updateUser }
+const login = async (req, res) => {
+    //  console.log("req.body : ",req.body)
+    const { email, password } = req.body;
+    // console.log("email , password : ", email, password);
+
+    if (email === "") return res.status(400).json({
+        success: false,
+        message: "Invalid credentials. Please try again."
+    })
+
+    try {
+        const isExits = await User.findOne({ email }).select(" -phone ")
+        // console.log(isExits)
+        if (isExits === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials. Please try again. Check your email and password.."
+            })
+        }
+
+        const storedData = isExits?.password;
+        // console.log("storedData : ", storedData)
+
+        const isMatch = await bcrypt.compare(password, storedData);
+
+        // console.log("isMatch : ", isMatch)
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials. Please try again and check your email and password.."
+            })
+        } else {
+
+        const token = jsonwebtoken.sign(
+                { _id: isExits?._id },
+                process.env.SECRECTKEY, {
+                expiresIn: "1d"
+            }
+            )
+            // console.log("token : ", token)
+
+            res.cookie("token" ,token, {
+                httpOnly: false,
+                secure: false,
+                sameSite: "strict", 
+                maxAge: 24 * 60 * 60 * 1000,
+            })
+
+            return res.status(200).json({
+                success: true,
+                message: "User Login Successfully..",
+                token:token
+            })
+
+        }
+
+
+
+
+
+
+
+
+    } catch (error) {
+        console.log("error : ", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error.."
+        })
+
+    }
+
+}
+
+export default { createUser, getAllUser, updateUser, login }
 
