@@ -1,7 +1,7 @@
 
 import JWT from "jsonwebtoken"
 const tokenVerify = (req, res, next) => {
-    const token = req?.headers?.authorization;
+    const token = req.cookies.token;
     if (!token) {
         return res.status(400).json({
             success: false,
@@ -11,7 +11,6 @@ const tokenVerify = (req, res, next) => {
 
     try {
         const decode = JWT.verify(token, process.env.SECRECTKEY);
-        // console.log("decode : ", decode)
         req.user = decode;
         next()
 

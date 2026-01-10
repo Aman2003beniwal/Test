@@ -75,8 +75,27 @@ const createUser = async (req, res) => {
 
         const responseData = await User.find({ email: payload.email }).select("_id name email phone")
 
-        // console.log("userData :", userData)
-        console.log("responseData :", responseData)
+        console.log("userData :", userData)
+        // console.log("responseData :", responseData)
+
+
+
+
+
+        const token = jsonwebtoken.sign(
+            { _id: userData?._id },
+            process.env.SECRECTKEY, {
+            expiresIn: "1d"
+        }
+        )
+        // console.log("token : ", token)
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 24 * 60 * 60 * 1000,
+            sameSite: "lax",
+        })
 
         return res.status(201).json({
             success: true,
@@ -94,9 +113,67 @@ const createUser = async (req, res) => {
     }
 }
 
+const login = async (req, res) => {
+    const { email, password } = req.body;
+
+    if (email === "") return res.status(400).json({
+        success: false,
+        message: "Invalid credentials. Please try again."
+    })
+
+    try {
+        const isExits = await User.findOne({ email }).select(" -phone ")
+        // console.log(isExits)
+        if (isExits === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials. Please try again. Check your email and password.."
+            })
+        }
+
+        const storedData = isExits?.password;
+
+        const isMatch = await bcrypt.compare(password, storedData);
+
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials. Please try again and check your email and password.."
+            })
+        }
+
+        const token = jsonwebtoken.sign(
+            { _id: isExits?._id },
+            process.env.SECRECTKEY, {
+            expiresIn: "1d"
+        }
+        )
+
+        res.cookie("token", token, {
+            httpOnly: false,
+            secure: false
+        })
+
+        return res.status(200).json({
+            success: true,
+            message: "User Login Successfully..",
+            token: token
+        })
+
+
+    } catch (error) {
+        console.log("error : ", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error.."
+        })
+
+    }
+
+}
+
 const getAllUser = async (req, res) => {
     try {
-
         // const data = await User.find().select("-password");
         const data = await User.find().select("email id name phone");
         if (data.length === 0) {
@@ -163,79 +240,7 @@ const updateUser = async (req, res) => {
 
 }
 
-const login = async (req, res) => {
-    //  console.log("req.body : ",req.body)
-    const { email, password } = req.body;
-    // console.log("email , password : ", email, password);
 
-    if (email === "") return res.status(400).json({
-        success: false,
-        message: "Invalid credentials. Please try again."
-    })
-
-    try {
-        const isExits = await User.findOne({ email }).select(" -phone ")
-        // console.log(isExits)
-        if (isExits === null) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid credentials. Please try again. Check your email and password.."
-            })
-        }
-
-        const storedData = isExits?.password;
-        // console.log("storedData : ", storedData)
-
-        const isMatch = await bcrypt.compare(password, storedData);
-
-        // console.log("isMatch : ", isMatch)
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid credentials. Please try again and check your email and password.."
-            })
-        } else {
-
-        const token = jsonwebtoken.sign(
-                { _id: isExits?._id },
-                process.env.SECRECTKEY, {
-                expiresIn: "1d"
-            }
-            )
-            // console.log("token : ", token)
-
-            res.cookie("token" ,token, {
-                httpOnly: false,
-                secure: false,
-                sameSite: "strict", 
-                maxAge: 24 * 60 * 60 * 1000,
-            })
-
-            return res.status(200).json({
-                success: true,
-                message: "User Login Successfully..",
-                token:token
-            })
-
-        }
-
-
-
-
-
-
-
-
-    } catch (error) {
-        console.log("error : ", error)
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error.."
-        })
-
-    }
-
-}
 
 export default { createUser, getAllUser, updateUser, login }
 

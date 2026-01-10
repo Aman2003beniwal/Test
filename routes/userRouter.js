@@ -4,10 +4,12 @@ import userController from "../controllers/userController.js"
 import tokenVerify from "../middleware/tokenVerify.js";
 const router = express.Router();
 
-router.post("/createUser", requestBody, userController.createUser)
-router.get("/getUser", userController.getAllUser)
-router.put("/updateUser", requestBody, userController.updateUser);
 router.post("/login", requestBody, userController.login);
+
+router.get("/getUser", tokenVerify, userController.getAllUser)
+
+router.post("/createUser", requestBody, userController.createUser)
+router.put("/updateUser",tokenVerify, requestBody, userController.updateUser);
 
 
 export default router 
